@@ -11,8 +11,8 @@
 #include "WiFi.h"
 // #include<WiFiS3.h>
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
-const char ssid[]= "Surya";        // your network SSID (name)
-const char pass[]= "buug8394$";    // your network password (use for WPA, or use as key for WEP) */
+const char ssid[]= "<SSID>";        // your network SSID (name)
+const char pass[]= "<PASSWORD>";    // your network password (use for WPA, or use as key for WEP) */
 
 
 //WiFiClientSecure net = WiFiClientSecure();
