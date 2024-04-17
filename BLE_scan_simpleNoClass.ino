@@ -102,11 +102,22 @@ void loop() {
         Serial.print("\t"); Serial.println(rssi);
 
         JsonDocument message;
-        message[""] = 
+        message["sender"] = DEVICE;
+        message["beacon"] = dName;
+        message["TXPower"] = dTxPower;
+        message["RSSI"] = rssi;
+        message["MAC"] = address;
+        char buff[256];
+        Serial.println("Sending message:");
+        serializeJson(message,buff);
+
+        mqClient.beginMessage(topic);
+        mqClient.print(buff);
+        mqClient.endMessage(); 
         
       }
     }
      Serial.println("Scan done!");
     pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
-  delay(2000);
+  delay(500);
 }
