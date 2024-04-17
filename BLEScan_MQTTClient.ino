@@ -124,6 +124,6 @@ void loop() {
     }
     Serial.println("Scan done!");
     pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
-    delay(2000);
+    delay(1000);
   }
 }
