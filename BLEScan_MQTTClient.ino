@@ -1,6 +1,3 @@
-// change this name for every device you install this script on
-#define DEVICE "ESP3203" 
-
 // These libraries are needed for beacon Scan
 #include <BLEDevice.h>
 #include <BLEUtils.h>
@@ -26,11 +23,11 @@ BLEScan* pBLEScan;
 WiFiClient wfc;
 MqttClient mqClient(wfc);
 
-char* broker = "192.168.4.54";
+char* broker = "192.0.0.2";
 int port = 1883;
 char* topic = "BLE_beacon_details";
 
-const long interval = 5000;
+const long interval = 2000;
 long prevMillis = 0;
 
 void setup() {
@@ -82,6 +79,11 @@ void loop() {
 
   mqClient.poll();
 
+  if(!mqClient.connected())
+  {
+      mqClient.setUsernamePassword(BROKER_USER,BROKER_PWD);
+      mqClient.connect(broker,port);
+  }
   long curr_millis = millis();
   long diff = curr_millis - prevMillis;
 
@@ -124,6 +126,6 @@ void loop() {
     }
     Serial.println("Scan done!");
     pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
-    delay(1000);
+    delay(500);
   }
 }
