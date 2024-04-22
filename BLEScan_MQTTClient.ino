@@ -13,7 +13,7 @@
 #include <ArduinoMqttClient.h>
 #include <ArduinoJson.h>
 
-int scanTime = 5; //In seconds 
+int scanTime = 2; //In seconds 
 
 //char* network=SECRET_SSID;
 //char* passwd=SECRET_PWD;
