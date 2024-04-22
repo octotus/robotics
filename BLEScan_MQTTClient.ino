@@ -13,48 +13,81 @@
 #include <ArduinoMqttClient.h>
 #include <ArduinoJson.h>
 
-int scanTime = 5; //In seconds
+int scanTime = 5; //In seconds 
 
-char* network=SECRET_SSID;
-char* passwd=SECRET_PWD;
+//char* network=SECRET_SSID;
+//char* passwd=SECRET_PWD;
 
 BLEScan* pBLEScan;
 
 WiFiClient wfc;
 MqttClient mqClient(wfc);
 
-char* broker = "192.0.0.2";
-int port = 1883;
+
 char* topic = "BLE_beacon_details";
 
 const long interval = 2000;
 long prevMillis = 0;
+struct connect_data c;
+
+bool connectWiFi(struct connect_data)
+{  
+  bool state=false;
+  WiFi.setHostname(DEVICE);
+  WiFi.begin(c.network,c.net_passwd);
+  int tries = 0;
+  while(tries < 5)
+  {
+    if(WiFi.status()!=WL_CONNECTED)
+    {
+      delay(1000);
+      tries++;
+    }
+    else
+    {
+      state=true;
+      tries=6;
+    }
+  }
+  return state;
+}
+
 
 void setup() {
+  bool state=false;
   Serial.begin(115200);
+  WiFi.mode(WIFI_STA);
 
   // Connect to Wi-Fi and confirm local IP 
 
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(network, passwd);
-  while(WiFi.status() != WL_CONNECTED)
+  while(state == false) 
   {
-    delay(500);
+    c = c1;
+    state = connectWiFi(c);  
+    if(state == false)
+    {
+      c = c2;
+      state=connectWiFi(c);
+    }
+    delay(10000);
   }
+
+/*
   Serial.print("Connected to WiFi Network: ");
   Serial.println(network);
   IPAddress ip = WiFi.localIP();
   Serial.print("Local IP Address is: ");
   Serial.println(ip);
   Serial.println("\n");
+*/
   // WiFi Connect Done
 
   // Set up MQTT Client and Connect to Broker //
   mqClient.setId(DEVICE);
   // use this space to set username / password for accessing the server //
-  mqClient.setUsernamePassword(BROKER_USER,BROKER_PWD);
+  mqClient.setUsernamePassword(c.broker,c.broker_pwd);
 
-  if(!mqClient.connect(broker,port))
+  if(!mqClient.connect(c.broker_IP,c.port))
   {
     Serial.println("Trying to connect to broker");
     while(1);
@@ -73,6 +106,8 @@ void setup() {
   pBLEScan->setWindow(99);  // less or equal setInterval value
 }
 
+
+
 void loop() {
   // put your main code here, to run repeatedly:
   // MQTT Part
@@ -81,8 +116,8 @@ void loop() {
 
   if(!mqClient.connected())
   {
-      mqClient.setUsernamePassword(BROKER_USER,BROKER_PWD);
-      mqClient.connect(broker,port);
+      mqClient.setUsernamePassword(c.broker,c.broker_pwd);
+      mqClient.connect(c.broker_IP,c.port);
   }
   long curr_millis = millis();
   long diff = curr_millis - prevMillis;
@@ -90,8 +125,8 @@ void loop() {
   if(diff > interval)
   {
     BLEScanResults foundDevices = pBLEScan->start(scanTime, false);
-    Serial.print("Devices found: ");
-    Serial.println(foundDevices.getCount());
+//    Serial.print("Devices found: ");
+//    Serial.println(foundDevices.getCount());
     int count = foundDevices.getCount();
     for(int i = 0; i < count; i++)
     {
@@ -102,10 +137,10 @@ void loop() {
       String address = device.getAddress().toString().c_str();
       if(dName.size() > 0)
       {
-        Serial.print(dName.c_str());
-        Serial.print("\t"); Serial.print(address); 
-        Serial.print("\t"); Serial.print(dTxPower);
-        Serial.print("\t"); Serial.println(rssi);
+//        Serial.print(dName.c_str());
+//        Serial.print("\t"); Serial.print(address); 
+//        Serial.print("\t"); Serial.print(dTxPower);
+//        Serial.print("\t"); Serial.println(rssi);
 
         JsonDocument message;
         message["sender"] = DEVICE;
@@ -114,18 +149,18 @@ void loop() {
         message["RSSI"] = rssi;
         message["MAC"] = address;
         char buff[256];
-        Serial.println("Sending message:");
+//        Serial.println("Sending message:");
         serializeJson(message,buff);
 
         mqClient.beginMessage(topic);
         mqClient.print(buff);
         mqClient.endMessage();
 
-        Serial.println("\n\tMessage Sent");
+//        Serial.println("\n\tMessage Sent");
       }
     }
     Serial.println("Scan done!");
     pBLEScan->clearResults();   // delete results fromBLEScan buffer to release memory
-    delay(500);
+    delay(2000);
   }
 }
