@@ -13,7 +13,7 @@
 #include <ArduinoMqttClient.h>
 #include <ArduinoJson.h>
 
-int scanTime = 2; //In seconds 
+int scanTime = 5; //In seconds 
 
 //char* network=SECRET_SSID;
 //char* passwd=SECRET_PWD;
@@ -23,18 +23,16 @@ BLEScan* pBLEScan;
 WiFiClient wfc;
 MqttClient mqClient(wfc);
 
-
 char* topic = "BLE_beacon_details";
 
 const long interval = 2000;
 long prevMillis = 0;
-struct connect_data c;
+connect_data *c;
 
-bool connectWiFi(struct connect_data)
+bool connectWiFi(connect_data *c)
 {  
   bool state=false;
-  WiFi.setHostname(DEVICE);
-  WiFi.begin(c.network,c.net_passwd);
+  WiFi.begin(c->network,c->net_passwd);
   int tries = 0;
   while(tries < 5)
   {
@@ -56,41 +54,48 @@ bool connectWiFi(struct connect_data)
 void setup() {
   bool state=false;
   Serial.begin(115200);
+  
+  WiFi.disconnect(true);
+  WiFi.config(INADDR_NONE,INADDR_NONE,INADDR_NONE);
   WiFi.mode(WIFI_STA);
-
+  WiFi.setHostname(DEVICE);
   // Connect to Wi-Fi and confirm local IP 
-
-  while(state == false) 
+  c = define_linked_list();
+  int counter = 0;
+  
+  while((state==false)) 
   {
-    c = c1;
-    state = connectWiFi(c);  
-    if(state == false)
+    while(c)
     {
-      c = c2;
-      state=connectWiFi(c);
+      state = connectWiFi(c);
+      if(state == false)
+      {
+        continue;    
+      }
+      else
+      {
+        break;
+      }
     }
-    delay(10000);
+    delay(5000);
+    counter++;
+    if(counter == 10)
+    {
+      delay(20000);
+    }
   }
 
-/*
-  Serial.print("Connected to WiFi Network: ");
-  Serial.println(network);
-  IPAddress ip = WiFi.localIP();
-  Serial.print("Local IP Address is: ");
-  Serial.println(ip);
-  Serial.println("\n");
-*/
   // WiFi Connect Done
 
   // Set up MQTT Client and Connect to Broker //
   mqClient.setId(DEVICE);
   // use this space to set username / password for accessing the server //
-  mqClient.setUsernamePassword(c.broker,c.broker_pwd);
+  mqClient.setUsernamePassword(c->broker,c->broker_pwd);
 
-  if(!mqClient.connect(c.broker_IP,c.port))
+  while(!mqClient.connect(c->broker_IP,c->port))
   {
     Serial.println("Trying to connect to broker");
-    while(1);
+    delay(2000);
   }
   
   Serial.println("Connected to broker");
@@ -100,7 +105,6 @@ void setup() {
 
   BLEDevice::init(DEVICE);
   pBLEScan = BLEDevice::getScan(); //create new scan
-  //pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
   pBLEScan->setActiveScan(true); //active scan uses more power, but get results faster
   pBLEScan->setInterval(100);
   pBLEScan->setWindow(99);  // less or equal setInterval value
@@ -116,8 +120,8 @@ void loop() {
 
   if(!mqClient.connected())
   {
-      mqClient.setUsernamePassword(c.broker,c.broker_pwd);
-      mqClient.connect(c.broker_IP,c.port);
+      mqClient.setUsernamePassword(c->broker,c->broker_pwd);
+      mqClient.connect(c->broker_IP,c->port);
   }
   long curr_millis = millis();
   long diff = curr_millis - prevMillis;
