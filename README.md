@@ -1,4 +1,6 @@
-# Robotics
-Nandi Control code
+This repository is a collection of code / scripts written around 2 / 3 themes. 
+  1. a ground vehicle that I am working on. It is a very basic device that is controlled by a RPi.
+  2. a BLE device that I am building in collaboration with others. This is controlled by ESP32
+  3. a collection of other ESP32 code - both BT and BLE code - that I am playing around with.
 
-Nandi project aims to create a generic autonomous indoor ground vehicle. Powered by RPi - the vehicle runs on four motors grouped into two (left and right) and uses skid-steering. The sensors include a LiDAR and a SONAR. This repo will contain control code created for this vehicle. More details will be added
+Each code should be sufficiently commended within. Since these projects are done at my leisure - development in any one branch is not linear. Projects change per my whims.
