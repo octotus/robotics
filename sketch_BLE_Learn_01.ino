@@ -3,7 +3,7 @@
 #include <BLEServer.h>
 #include <BLE2901.h>
 #include <BLE2902.h>
-
+#include <String.h>
 
 // Define some text shortcuts - to ease typing in the code
 
@@ -42,9 +42,9 @@
   BLECharacteristic *insulinRemaining = NULL;
   BLECharacteristic *insulinUnits = NULL; // send (milli) units delivered
   BLECharacteristic *insulinDeliveryMode = NULL; // Predefined values? 
-  //BLECharacteristic *insulinDeliveryStatus = NULL; // send as notification?
-  //BLECharacteristic *insulinControlPoint = NULL; // should be part of Insulin client?
-  //BLECharacteristic *insulinHistory = NULL; // ??
+  BLECharacteristic *insulinDeliveryStatus = NULL; // send as notification?
+  BLECharacteristic *insulinControlPoint = NULL; // should be part of Insulin client?
+  BLECharacteristic *bolusDelivery = NULL; // ??
   BLECharacteristic *insulinDeliveryAlarms = NULL; // Annunciation characteristic
 
 
@@ -72,22 +72,23 @@ void setup() {
   BLEDevice::init("ESP32_BLE");
   BLEServer *pServer = BLEDevice::createServer();
   pServer->setCallbacks(new MyCallBacks());
-  BLEService *pService = pServer->createService(SERVICE_UUID);
+  BLEService *pService = pServer->createService(BLEUUID(SERVICE_UUID),30);
 
 // Assign all characteristic pointers to service
   insulinRemaining = pService->createCharacteristic(CHARACTERISTIC_UUID1, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
   insulinUnits = pService->createCharacteristic(CHARACTERISTIC_UUID2, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
   insulinDeliveryMode = pService->createCharacteristic(CHARACTERISTIC_UUID3, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
   insulinDeliveryAlarms = pService->createCharacteristic(CHARACTERISTIC_UUID4, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
-
-  //insulinDeliveryStatus = pService->createCharacteristic(CHARACTERISTIC_UUID5, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
-  //insulinControlPoint = pService->createCharacteristic(CHARACTERISTIC_UUID6,  BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
-  //insulinHistory = pService->createCharacteristic(CHARACTERISTIC_UUID7, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
-  
-    /* insulinRemaining, insulinUnits, insulinDeliveryMode, insulinDeliveryStatus, 
-insulinControlPoint, insulinHistory, insulinDeliveryAlarms*/
+  insulinDeliveryStatus = pService->createCharacteristic(CHARACTERISTIC_UUID5, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
+  insulinControlPoint = pService->createCharacteristic(CHARACTERISTIC_UUID6,  BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
+  bolusDelivery = pService->createCharacteristic(CHARACTERISTIC_UUID7, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE | BLECharacteristic::PROPERTY_NOTIFY);
 
 // Add Descriptor to all characteristics
+
+  BLE2901 *bDelivery = new BLE2901();
+  bDelivery->setDescription("Bolus Delivery");
+  bolusDelivery->addDescriptor(bDelivery);
+  bolusDelivery->addDescriptor(new BLE2902());
 
   BLE2901 *IUDesc = new BLE2901();
   IUDesc->setDescription("Units Delivered");
@@ -104,23 +105,10 @@ insulinControlPoint, insulinHistory, insulinDeliveryAlarms*/
   insulinDeliveryMode->addDescriptor(IDMDesc);
   insulinDeliveryMode->addDescriptor(new BLE2902());
 
-  BLE2901 *AlarmDesc = new BLE2901();
-  AlarmDesc->setDescription("Ding Dong");
-  insulinDeliveryAlarms->addDescriptor(new BLE2902());
-  insulinDeliveryAlarms->addDescriptor(AlarmDesc);
-
-
-/*
   BLE2901 *IDSDesc = new BLE2901();
   IDSDesc->setDescription("Delivery Status");
   insulinDeliveryStatus->addDescriptor(IDSDesc);
   insulinDeliveryStatus->addDescriptor(new BLE2902());
-
-  insulinControlPoint->addDescriptor(new BLE2902());
-  
-  insulinHistory->addDescriptor(new BLE2902());
-*/
-
 
 // start the service and start advertising
 
@@ -131,8 +119,10 @@ insulinControlPoint, insulinHistory, insulinDeliveryAlarms*/
   BLEDevice::startAdvertising();
 }
 
+
+
 void loop() {
-  delay(2000);
+  delay(5000);
   remaining_units = remaining_units - decrement;
   dose_units = dose_units + decrement;
   if(deviceConnected)
@@ -142,7 +132,7 @@ void loop() {
 
     insulinUnits->setValue(dose_units);
     insulinUnits->notify();
-
+//  normal insulin actions
     if(remaining_units >=10)
     {
       insulinDeliveryMode->setValue("normal");
@@ -152,6 +142,7 @@ void loop() {
       insulinDeliveryAlarms->notify();
     
     }
+//  low insulin actions
     if(remaining_units < 10)
     {      
       insulinDeliveryAlarms->setValue("Reservoir Low");
@@ -160,6 +151,7 @@ void loop() {
       insulinDeliveryMode->setValue("Normal. No PPD.");
       insulinDeliveryMode->notify();
     }
+//  critically low insulin
     if(remaining_units < 2)
     {
       insulinDeliveryAlarms->setValue("Reservoir Empty");
@@ -171,6 +163,30 @@ void loop() {
       delay(10000);
       remaining_units=60;
       dose_units=0;
+    }
+//  bolus deliver actions
+    if(bolusDelivery->getValue().length() > 0)
+    {
+      String bolusUnits = bolusDelivery->getValue();
+      int bolus = std::stoi(bolusUnits.c_str());
+      if(remaining_units > bolus)
+      {
+        remaining_units = remaining_units - bolus;
+        dose_units = dose_units + bolus;
+        insulinRemaining->setValue(remaining_units);
+        insulinRemaining->notify();
+
+        insulinUnits->setValue(dose_units);
+        insulinUnits->notify();
+      }
+      else
+      {
+        String alarm_message = "Can't allocate " + bolusUnits + " units for bolus!";
+        insulinDeliveryAlarms->setValue(alarm_message);
+        insulinDeliveryAlarms->notify();
+        delay(5000);
+
+      }
     }
   }
 }
