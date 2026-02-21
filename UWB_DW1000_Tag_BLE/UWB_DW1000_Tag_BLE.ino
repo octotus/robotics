@@ -130,6 +130,7 @@ void setup() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 void loop() {
+  DW1000.handleEvents();  // process deferred IRQ (ESP32 safe)
   unsigned long now = millis();
 
   if (state == IDLE && (now - lastRangeStart) >= RANGE_INTERVAL_MS) {

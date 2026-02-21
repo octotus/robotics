@@ -85,6 +85,7 @@ void setup() {
 
 // ─────────────────────────────────────────────────────────────────────────────
 void loop() {
+  DW1000.handleEvents();  // process deferred IRQ (ESP32 safe)
   if (sentAck) {
     sentAck = false;
     if (state == POLL_RECEIVED) {
