@@ -107,6 +107,10 @@ void setup() {
   DW1000.attachSentHandler(handleSent);
   DW1000.attachReceivedHandler(handleReceived);
 
+  char info[128];
+  DW1000.getPrintableDeviceIdentifier(info);
+  Serial.print("DW1000 Device ID: "); Serial.println(info);
+
   // ── BLE init ───────────────────────────────────────────────────────────────
   BLEDevice::init("UWB_Tag");
   bleServer = BLEDevice::createServer();
@@ -135,6 +139,7 @@ void loop() {
 
   if (state == IDLE && (now - lastRangeStart) >= RANGE_INTERVAL_MS) {
     lastRangeStart = now;
+    Serial.printf("Sending POLL to Anchor %d\n", anchorIds[currentAnchor]);
     sendPoll(anchorIds[currentAnchor]);
   }
 
@@ -174,6 +179,7 @@ void loop() {
 
   // Timeout
   if (state != IDLE && (now - lastRangeStart) > TIMEOUT_MS) {
+    Serial.printf("TIMEOUT waiting for Anchor %d (state=%d)\n", anchorIds[currentAnchor], state);
     currentAnchor = (currentAnchor + 1) % NUM_ANCHORS;
     state = IDLE;
   }

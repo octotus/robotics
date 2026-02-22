@@ -89,9 +89,14 @@ void loop() {
   if (sentAck) {
     sentAck = false;
     if (state == POLL_RECEIVED) {
-      // Record when POLL_ACK left the antenna
+      // Record when POLL_ACK left the antenna, then wait for RANGE
+      // Do NOT call listenForMessages() — that resets state to IDLE.
+      // Keep state=POLL_RECEIVED so the RANGE message is accepted.
       DW1000.getTransmitTimestamp(timePollAckSent);
-      listenForMessages();
+      DW1000.newReceive();
+      DW1000.setDefaults();
+      DW1000.receivePermanently(false);
+      DW1000.startReceive();
     }
   }
 
