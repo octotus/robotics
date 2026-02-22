@@ -33,7 +33,7 @@
 // ── Pin definitions ──────────────────────────────────────────────────────────
 const uint8_t PIN_RST = 27;
 const uint8_t PIN_IRQ = 34;
-const uint8_t PIN_SS  = 5;
+const uint8_t PIN_SS  = 4;   // Makerfabs/generic Chinese board uses CS=4
 
 // ── Tag identity ─────────────────────────────────────────────────────────────
 const uint8_t TAG_ID = 1;
